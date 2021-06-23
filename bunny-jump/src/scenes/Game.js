@@ -6,6 +6,8 @@ export default class Game extends Phaser.Scene {
     platforms
     /** @type {Phaser.Physics.Arcade.Sprite} */
     player
+    /** @type {boolean} */
+    isPlayerOnPlatform = false
     /** @type {Phaser.Physics.Arcade.Group} */
     carrots
     /** @type {number} */
@@ -59,7 +61,8 @@ export default class Game extends Phaser.Scene {
         // player
         this.player = this.physics.add.sprite(240, 320, 'bunny-stand')
                            .setScale(0.5)
-        this.physics.add.collider(this.platforms, this.player)
+        this.physics.add.collider(
+            this.player, this.platforms, this._playerTouchedPlatform, undefined, this)
         
 
         // only check down collisions for player
@@ -93,31 +96,25 @@ export default class Game extends Phaser.Scene {
             const platform = child
             const scrollY = this.cameras.main.scrollY
             if (platform.y >= scrollY + 700){
-                platform.y = scrollY - Phaser.Math.Between(50, 100)
+                platform.y = scrollY - Phaser.Math.Between(50, 75)
                 platform.body.updateFromGameObject()
                 this._addCarrotAbove( platform )
             }
         })
 
-        // if player has touchedDown (landed), automatically jump
-        const isTouchingDown = this.player.body.touching.down
-        if( isTouchingDown ){
-            // jump straight up
-            this.player.setVelocityY(-300)
-            this.player.setTexture('bunny-jump')
-            this.sound.play('jump')
-        }
-
+        
+        // if player is in middle of a jump, change texture to stand
         const vy = this.player.body.velocity.y
         if(vy > 0 && this.player.texture.key !== 'bunny-stand'){
             this.player.setTexture('bunny-stand')
         }
 
+        const isTouchingDown = this.player.body.touching.down
         // left and right input logic
-        if (this.cursors.left.isDown && !isTouchingDown){
+        if (this.cursors.left.isDown && !this.isPlayerOnPlatform){
             this.player.setVelocityX(-200)
         }
-        else if (this.cursors.right.isDown && !isTouchingDown){
+        else if (this.cursors.right.isDown && !this.isPlayerOnPlatform){
             this.player.setVelocityX(200)
         }
         else{
@@ -166,6 +163,22 @@ export default class Game extends Phaser.Scene {
         this.physics.world.enable( carrot );
         return carrot;
 
+    }
+    
+    /**
+     * @param {Phaser.Physics.Arcade.Sprite} player 
+     * @param {Phaser.Physics.Arcade.Sprite} platform
+     */
+     _playerTouchedPlatform(player, platform){
+        this.isPlayerOnPlatform = player.body.touching.down;
+        if(this.isPlayerOnPlatform ){
+            // jump straight up
+            player.setVelocityY(-300)
+            player.setTexture('bunny-jump')
+
+            this.sound.play('jump')
+        }
+        
     }
     /**
      * @param {Phaser.Physics.Arcade.Sprite} player 
